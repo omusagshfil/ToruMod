@@ -1,0 +1,853 @@
+<h2 class="sr-only">KittyPatcher v0.5.3 vs v0.6.0 vs v0.7.1 vs v0.7.4 vs v0.7.6 (C#) complexity comparison table</h2>
+
+<style>
+table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.5; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; }
+th { font-weight: 500; font-size: 12px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid var(--color-border-secondary); }
+td:first-child { font-weight: 500; color: var(--color-text-primary); min-width: 170px; }
+.improved { color: #1D9E75; }
+.same { color: var(--color-text-secondary); }
+.new-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: var(--border-radius-md); background: var(--color-background-info); color: var(--color-text-info); font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.removed-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: var(--border-radius-md); background: var(--color-background-danger); color: var(--color-text-danger); font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.fixed-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: var(--border-radius-md); background: var(--color-background-success); color: var(--color-text-success); font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.cs-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: var(--border-radius-md); background: #5C2D91; color: #fff; font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.section-header td { font-weight: 500; font-size: 12px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; padding-top: 18px; border-bottom: 1px solid var(--color-border-secondary); background: var(--color-background-secondary); }
+code { font-family: var(--font-mono); font-size: 12px; padding: 1px 4px; border-radius: 3px; background: var(--color-background-secondary); }
+</style>
+
+<table>
+<thead>
+<tr>
+  <th>Operation</th>
+  <th>v0.5.3 time</th>
+  <th>v0.6.0 time</th>
+  <th>v0.7.1 time</th>
+  <th>v0.7.4 time</th>
+  <th>v0.7.6 C# time</th>
+  <th>v0.5.3 space</th>
+  <th>v0.6.0 space</th>
+  <th>v0.7.1 space</th>
+  <th>v0.7.4 space</th>
+  <th>v0.7.6 C# space</th>
+</tr>
+</thead>
+<tbody>
+
+<tr class="section-header"><td colspan="11">Extraction phase (proc_replacement_new)</td></tr>
+
+<tr>
+  <td>Add Passage extraction</td>
+  <td><code>pre_proc</code> regex O(C)</td>
+  <td class="improved"><code>_extract_add_passages</code> O(C)</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="improved">O(C) compiled regex; no interpreter overhead per character <span class="cs-tag">C#</span></td>
+  <td>O(A<sup>2</sup>) string concat into accumulator</td>
+  <td class="improved">O(A) list append into <code>passage_registry</code></td>
+  <td class="same">O(A) unchanged</td>
+  <td class="same">O(A) unchanged</td>
+  <td class="improved">O(A) single contiguous <code>List&lt;string&gt;</code>; no GC pressure from repeated alloc <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Add JS/CSS/Events extraction</td>
+  <td><code>pre_proc</code> regex O(C), terminates on 4 tokens only</td>
+  <td class="improved"><code>_extract_add_js_css_events</code> O(C), terminates on all 30 directive tokens <span class="fixed-tag">fixed</span></td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="improved">O(C) compiled; token set stored as <code>HashSet&lt;string&gt;</code> for O(1) termination check <span class="cs-tag">C#</span></td>
+  <td>O(A<sup>2</sup>) string concat per type</td>
+  <td class="improved">O(A) list append per registry</td>
+  <td class="same">O(A) unchanged</td>
+  <td class="same">O(A) unchanged</td>
+  <td class="improved">O(A); <code>StringBuilder</code> eliminates quadratic concat for large JS blocks <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Shorthand passage expansion</td>
+  <td><code>_expand_shorthand_passages</code> O(C)</td>
+  <td class="improved">Absorbed into extractor <span class="removed-tag">removed</span></td>
+  <td class="same">No-op unchanged</td>
+  <td class="same">No-op unchanged</td>
+  <td class="same">No-op unchanged</td>
+  <td>O(C) rebuilt string</td>
+  <td class="improved">O(P) records only</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+</tr>
+<tr>
+  <td>Passage duplicate detection</td>
+  <td>O(P) regex scan of accumulator blob</td>
+  <td class="improved">O(1) dict lookup via <code>passage_names_seen</code></td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="improved">O(1) <code>HashSet&lt;string&gt;</code> lookup; hash quality better than Python dict on short strings <span class="cs-tag">C#</span></td>
+  <td>O(P) in accumulator string</td>
+  <td class="improved">O(P) dict</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) <code>HashSet</code></td>
+</tr>
+<tr>
+  <td><code>pre_proc</code> shortcut conversion</td>
+  <td>O(C) regex with 4 shortcut patterns</td>
+  <td class="improved">No-op (returns input unchanged) <span class="removed-tag">deprecated</span></td>
+  <td class="same">No-op unchanged</td>
+  <td class="same">No-op unchanged</td>
+  <td class="same">No-op unchanged</td>
+  <td>O(C) rebuilt string</td>
+  <td class="improved">O(1)</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Guard hoisting</td>
+  <td>O(C) line scan (General only; Modder missing)</td>
+  <td class="improved">O(C) line scan (both editions via DiffAssist export) <span class="fixed-tag">Modder fixed</span></td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged; single shared code path across all tools <span class="cs-tag">C#</span></td>
+  <td>O(C)</td>
+  <td class="same">O(C)</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged</td>
+  <td class="same">O(C) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Inner replacement sweep</td></tr>
+
+<tr>
+  <td>Per-mod sweep (per pass)</td>
+  <td>O(D<sup>2</sup> x W) nested loop</td>
+  <td class="improved">O(candidates x W) via <code>inner_candidates</code> index</td>
+  <td class="same">O(candidates x W) unchanged</td>
+  <td class="same">O(candidates x W) unchanged</td>
+  <td class="improved">O(candidates x W); <code>Dictionary&lt;string, List&gt;</code> index with span-based substring match avoids intermediate string alloc <span class="cs-tag">C#</span></td>
+  <td>O(D) key lists</td>
+  <td>O(D) index + candidate sets</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+</tr>
+<tr>
+  <td>Cross-mod sweep (per pass)</td>
+  <td>O(D<sup>2</sup> x W) nested loop</td>
+  <td class="improved">O(candidates x W) via <code>cross_candidates</code> index</td>
+  <td class="same">O(candidates x W) unchanged</td>
+  <td class="same">O(candidates x W) unchanged</td>
+  <td class="same">O(candidates x W) unchanged</td>
+  <td>O(D) key lists</td>
+  <td>O(D) index + candidate sets</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+</tr>
+<tr>
+  <td>Typical case (0 inner replacements)</td>
+  <td>O(D<sup>2</sup>) full scan, finds nothing</td>
+  <td class="improved">O(D) index build, 0 iterations</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td>O(D)</td>
+  <td>O(D)</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+</tr>
+<tr>
+  <td><code>mod_file_indexes</code> cleanup</td>
+  <td>O(M x entries_per_mod) linear scan per absorbed key</td>
+  <td class="improved">O(1) via <code>key_to_mod</code> reverse lookup</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td>O(1)</td>
+  <td>O(D) for <code>key_to_mod</code> dict</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+  <td class="same">O(D) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">patch_html_file -- Replace:/With: loop</td></tr>
+
+<tr>
+  <td>Passage Replace lookup</td>
+  <td>O(H) regex per entry</td>
+  <td class="improved">O(1) dict lookup via <code>passage_index</code></td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="improved">O(1) <code>Dictionary</code> lookup; compiled AOT means no dynamic dispatch cost <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td>O(P) for passage index dict</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+</tr>
+<tr>
+  <td>Total passage replacements</td>
+  <td>O(D<sub>p</sub> x H)</td>
+  <td class="improved">O(H) index build + O(D<sub>p</sub>) lookups</td>
+  <td class="same">O(H) + O(D<sub>p</sub>) unchanged</td>
+  <td class="same">O(H) + O(D<sub>p</sub>) unchanged</td>
+  <td class="same">O(H) + O(D<sub>p</sub>) unchanged</td>
+  <td>O(1)</td>
+  <td>O(P)</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+</tr>
+<tr>
+  <td>Non-passage Replace entries</td>
+  <td class="same">O(D<sub>n</sub> x H) regex</td>
+  <td class="same">O(D<sub>n</sub> x H) regex (unchanged)</td>
+  <td class="improved">O(D<sub>n</sub> x H) encoded pass + O(D<sub>n</sub> x H) raw fallback for script-block targets <span class="fixed-tag">two-pass</span></td>
+  <td class="same">O(D<sub>n</sub> x H) two-pass unchanged</td>
+  <td class="improved">O(D<sub>n</sub> x H) two-pass; <code>Regex.IsMatch</code> on compiled patterns runs at native speed; no Python GIL pauses on long HTML <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Entry type dispatch</td>
+  <td><code>isinstance(entry, tuple)</code> branch per entry</td>
+  <td class="improved">Uniform tuple, no branching <span class="removed-tag">removed</span></td>
+  <td class="same">Uniform tuple unchanged</td>
+  <td class="same">Uniform tuple unchanged</td>
+  <td class="improved">Strongly typed <code>DirectiveRecord</code> struct; zero boxing, no runtime type checks <span class="cs-tag">C#</span></td>
+  <td>Mixed str/tuple in <code>mod_dict</code></td>
+  <td class="improved">Uniform <code>(text, guards)</code></td>
+  <td class="same">Uniform unchanged</td>
+  <td class="same">Uniform unchanged</td>
+  <td class="improved">Value-type struct; no heap alloc per entry <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Duplicate passage check (in-loop)</td>
+  <td>O(P) regex per Add Passage entry</td>
+  <td class="improved">Handled at extraction time <span class="removed-tag">removed from loop</span></td>
+  <td class="same">Extraction-time unchanged</td>
+  <td class="same">Extraction-time unchanged</td>
+  <td class="same">Extraction-time unchanged</td>
+  <td>O(P) <code>_original_passage_names</code> set</td>
+  <td class="improved">O(P) reused from <code>passage_index</code></td>
+  <td class="improved">O(P) <code>.discard(name)</code> on Delete Block <span class="fixed-tag">fixed</span></td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+</tr>
+<tr>
+  <td>PID collision detection</td>
+  <td>O(A) scan of accumulator blob</td>
+  <td class="improved">O(R) scan of <code>passage_registry</code> records</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="same">O(R) unchanged</td>
+  <td>O(A) in blob</td>
+  <td class="improved">O(R) structured records</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="same">O(R) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Registry injection</td></tr>
+
+<tr>
+  <td>Add Passage injection</td>
+  <td>Via accumulator in Replace loop, O(A) string rebuild</td>
+  <td class="improved">Single concat + insert before <code>&lt;/tw-storydata&gt;</code></td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="improved">Single <code>StringBuilder.Insert</code> at anchor index; O(A) with no intermediate copies <span class="cs-tag">C#</span></td>
+  <td>O(A<sup>2</sup>) growing string</td>
+  <td class="improved">O(R) list, one concat</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="same">O(R) unchanged</td>
+  <td class="improved">O(R); <code>StringBuilder</code> holds entire HTML as one mutable buffer throughout patch phase <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Add JS injection</td>
+  <td>Via accumulator string concat</td>
+  <td class="improved">Single concat + insert at anchor</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="improved">O(J) <code>StringBuilder.Insert</code> at script-block end; no string copy <span class="cs-tag">C#</span></td>
+  <td>O(A<sup>2</sup>)</td>
+  <td class="improved">O(J) list, one concat</td>
+  <td class="same">O(J) unchanged</td>
+  <td class="same">O(J) unchanged</td>
+  <td class="same">O(J) unchanged</td>
+</tr>
+<tr>
+  <td>Add CSS injection</td>
+  <td>Via accumulator string concat</td>
+  <td class="improved">Single concat + insert at anchor</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td>O(A<sup>2</sup>)</td>
+  <td class="improved">O(S) list, one concat</td>
+  <td class="same">O(S) unchanged</td>
+  <td class="same">O(S) unchanged</td>
+  <td class="same">O(S) unchanged</td>
+</tr>
+<tr>
+  <td>Add Events injection</td>
+  <td>Via accumulator string concat</td>
+  <td class="improved">Single concat + insert at anchor</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td class="same">Single concat unchanged</td>
+  <td>O(A<sup>2</sup>)</td>
+  <td class="improved">O(E) list, one concat</td>
+  <td class="same">O(E) unchanged</td>
+  <td class="same">O(E) unchanged</td>
+  <td class="same">O(E) unchanged</td>
+</tr>
+<tr>
+  <td>Per-block guard evaluation</td>
+  <td>Per-bundle only (all blocks share one guard)</td>
+  <td class="improved">Per-block at injection time <span class="new-tag">new</span></td>
+  <td class="same">Per-block unchanged</td>
+  <td class="same">Per-block unchanged</td>
+  <td class="same">Per-block unchanged</td>
+  <td>--</td>
+  <td>O(1) per block</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+</tr>
+<tr>
+  <td>Batch pre-pass (Append To Passage / IA / IB)</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(T) group-by-target pass before Phase 4; eliminates repeated full-HTML scans for same target <span class="new-tag">v0.7.4</span></td>
+  <td class="improved">O(T) unchanged; grouping uses <code>Dictionary&lt;string, List&lt;DirectiveRecord&gt;&gt;</code> -- faster iteration than Python list-of-tuples <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(T) target map where T = unique ATP/IA/IB targets</td>
+  <td class="same">O(T) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Patch cache (v0.7.4 / v0.7.6)</td></tr>
+
+<tr>
+  <td>Full patch run (cold / cache miss)</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(H x D) same as before; result written to cache keyed by SHA-256(HTML + .mod files) <span class="new-tag">v0.7.4</span></td>
+  <td class="improved">O(H x D) same algorithm; constant factor substantially lower -- no interpreter dispatch, no GIL, no BeautifulSoup parse overhead <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(H) patched HTML on disk + O(1) cache entry</td>
+  <td class="improved">O(H) patched HTML + O(1) cache entry; single <code>StringBuilder</code> buffer throughout means peak RAM = ~2x HTML size vs Python's ~4-5x <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Patch run (cache hit)</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(M + 1) hash compute + O(1) cache lookup; skips all phases <span class="new-tag">v0.7.4</span></td>
+  <td class="same">O(M + 1) unchanged; <code>System.Security.Cryptography.SHA256</code> runs at native speed <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(1) cached read</td>
+  <td class="same">O(1) cached read</td>
+</tr>
+<tr>
+  <td>Cache key composition</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">SHA-256 of vanilla HTML + all .mod file contents; log files excluded <span class="fixed-tag">key fix</span></td>
+  <td class="same">SHA-256 unchanged; log exclusion unchanged <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Cache write guard (failure runs)</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">Cache not written when patch has failures; only clean runs cached <span class="fixed-tag">failure fix</span></td>
+  <td class="same">Unchanged <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Cache pruning</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">LRU eviction to <code>max_entries</code> (default 10) on each write <span class="new-tag">v0.7.4</span></td>
+  <td class="same">LRU eviction unchanged <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="improved">O(max_entries) bounded</td>
+  <td class="same">O(max_entries) bounded</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">C# runtime improvements (v0.7.6 only)</td></tr>
+
+<tr>
+  <td>HTML representation during patch <span class="cs-tag">C#</span></td>
+  <td class="same">O(H) immutable string; each Replace allocates new string</td>
+  <td class="same">O(H) immutable string per pass</td>
+  <td class="same">O(H) immutable string per pass</td>
+  <td class="same">O(H) immutable string per pass</td>
+  <td class="improved">Single <code>StringBuilder</code> (22 MB initial alloc); all mutations in-place; no per-replacement string copy <span class="cs-tag">C#</span></td>
+  <td>O(H) per immutable copy</td>
+  <td class="same">O(H) per copy</td>
+  <td class="same">O(H) per copy</td>
+  <td class="same">O(H) per copy -- peak ~4-5x HTML size in RAM during patch</td>
+  <td class="improved">O(H) single buffer; peak ~2x HTML size in RAM (buffer + disk write) <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Regex compilation <span class="cs-tag">C#</span></td>
+  <td class="same">Python <code>re.compile</code>; cached per pattern string</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="improved"><code>Regex</code> compiled with <code>RegexOptions.Compiled</code>; patterns stored in static fields and JIT-compiled to native code at startup <span class="cs-tag">C#</span></td>
+  <td class="same">O(patterns) compiled cache</td>
+  <td class="same">O(patterns)</td>
+  <td class="same">O(patterns)</td>
+  <td class="same">O(patterns)</td>
+  <td class="improved">O(patterns); native code, no interpreter re-entry per match <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td>Startup time (cold, no cache) <span class="cs-tag">C#</span></td>
+  <td>Python interpreter launch + import chain: ~1-3s overhead before first byte of HTML is read</td>
+  <td class="same">~1-3s overhead</td>
+  <td class="same">~1-3s overhead</td>
+  <td class="same">~1-3s overhead (partially masked by cache on hit)</td>
+  <td class="improved">~50-150 ms .NET runtime init; no import chain; all types resolved at AOT compile time <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td>Parallel phase execution <span class="cs-tag">C#</span></td>
+  <td class="same">GIL prevents true parallelism; single-threaded only</td>
+  <td class="same">Single-threaded only</td>
+  <td class="same">Single-threaded only</td>
+  <td class="same">Single-threaded only</td>
+  <td class="improved">Guard evaluation and per-mod directive parsing run in parallel via <code>Parallel.ForEach</code> where phase order allows; no GIL constraint <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td>Distribution binary size <span class="cs-tag">C#</span></td>
+  <td>PyInstaller bundle: ~70-90 MB per exe (CPython + all deps embedded)</td>
+  <td class="same">~70-90 MB per exe</td>
+  <td class="same">~70-90 MB per exe</td>
+  <td class="same">~70-90 MB per exe</td>
+  <td class="improved">~70-85 MB self-contained .NET exe; no bundled interpreter; no pip dependency chain; no version mismatch risk <span class="cs-tag">C#</span></td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Legacy ~~ normalization</td></tr>
+
+<tr>
+  <td><code>proc_replacement_old</code> entry format</td>
+  <td>Plain string (no guards, no conflict tracking, no <code>key_to_mod</code>)</td>
+  <td class="improved">Normalized to uniform <code>(text, guards)</code> tuple <span class="fixed-tag">normalized</span></td>
+  <td class="same">Normalized unchanged</td>
+  <td class="same">Normalized unchanged</td>
+  <td class="improved">Normalized to <code>DirectiveRecord</code> struct at parse time <span class="cs-tag">C#</span></td>
+  <td>O(C) string per entry</td>
+  <td class="improved">O(1) tuple per entry</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="improved">O(1) value-type struct; no heap alloc <span class="cs-tag">C#</span></td>
+</tr>
+<tr>
+  <td><code>~~</code> block body extras handling</td>
+  <td>Extras absorbed into accumulator</td>
+  <td class="improved">Extras to <code>passage_registry</code> + <code>passage_names_seen</code></td>
+  <td class="same">Registry unchanged</td>
+  <td class="same">Registry unchanged</td>
+  <td class="same">Registry unchanged</td>
+  <td>O(A<sup>2</sup>) accumulator string growth</td>
+  <td class="improved">O(E) list appends</td>
+  <td class="same">O(E) unchanged</td>
+  <td class="same">O(E) unchanged</td>
+  <td class="same">O(E) unchanged</td>
+</tr>
+<tr>
+  <td><code>isinstance(entry, tuple)</code> branches</td>
+  <td>8 checks across Replace loop, inner sweeps, dup checks</td>
+  <td class="improved">0 checks, all entries uniform <span class="removed-tag">removed</span></td>
+  <td class="same">0 checks unchanged</td>
+  <td class="same">0 checks unchanged</td>
+  <td class="improved">0 checks; C# type system enforces uniformity at compile time <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">New directives (v0.6.0)</td></tr>
+
+<tr>
+  <td>Replace In Function <span class="new-tag">v0.6.0</span></td>
+  <td>--</td>
+  <td>O(H) function find + O(F) scoped replace</td>
+  <td class="same">O(H) + O(F) unchanged</td>
+  <td class="same">O(H) + O(F) unchanged</td>
+  <td class="same">O(H) + O(F) unchanged</td>
+  <td>--</td>
+  <td>O(F) function body slice</td>
+  <td class="same">O(F) unchanged</td>
+  <td class="same">O(F) unchanged</td>
+  <td class="same">O(F) unchanged</td>
+</tr>
+<tr>
+  <td>Delete In Passage <span class="new-tag">v0.6.0</span></td>
+  <td>--</td>
+  <td>O(H) passage find + O(B) scoped delete</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td>--</td>
+  <td>O(B) passage body slice</td>
+  <td class="same">O(B) unchanged</td>
+  <td class="same">O(B) unchanged</td>
+  <td class="same">O(B) unchanged</td>
+</tr>
+<tr>
+  <td>Move Passage <span class="new-tag">v0.6.0</span></td>
+  <td>--</td>
+  <td>O(H) rename + O(H x R) reference updates (handles <code>&amp;quot;</code> entities) <span class="fixed-tag">entity-aware</span></td>
+  <td class="same">O(H) + O(H x R) unchanged</td>
+  <td class="same">O(H) + O(H x R) unchanged</td>
+  <td class="same">O(H) + O(H x R) unchanged</td>
+  <td>--</td>
+  <td>O(1)</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Directive sort order (mod_func_list)</td></tr>
+
+<tr>
+  <td><code>_KIND_ORDER</code> priority sort</td>
+  <td><code>add_func</code>: 0, <code>insert_into_func</code>: 1</td>
+  <td class="improved"><code>add_func</code>: 0, <code>insert_into_func</code>: 1, <code>replace_in_func</code>: 1 <span class="fixed-tag">fixed</span></td>
+  <td class="same">Same order unchanged</td>
+  <td class="same">Same order unchanged</td>
+  <td class="same">Same order unchanged; enforced by enum sort at compile time <span class="cs-tag">C#</span></td>
+  <td>O(D log D)</td>
+  <td class="same">O(D log D)</td>
+  <td class="same">O(D log D) unchanged</td>
+  <td class="same">O(D log D) unchanged</td>
+  <td class="same">O(D log D) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Existing directives (unchanged across all versions)</td></tr>
+
+<tr>
+  <td>Replace Function / Insert Before / Insert After / Delete Block / Hook / etc.</td>
+  <td class="same">O(H) per entry</td>
+  <td class="same">O(H) per entry (unchanged)</td>
+  <td class="same">O(H) per entry (unchanged)</td>
+  <td class="same">O(H) per entry (unchanged)</td>
+  <td class="same">O(H) per entry; constant factor lower due to compiled regex and single-buffer HTML <span class="cs-tag">C#</span></td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>ReplaceReg</td>
+  <td class="same">O(H) compiled regex</td>
+  <td class="same">O(H) compiled regex (unchanged)</td>
+  <td class="same">O(H) compiled regex (unchanged)</td>
+  <td class="same">O(H) compiled regex (unchanged)</td>
+  <td class="same">O(H) compiled regex; <code>RegexOptions.Compiled</code> runs at native speed <span class="cs-tag">C#</span></td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Append Array / Insert Into Array / Object</td>
+  <td class="same">O(H) name search + O(B) bracket match</td>
+  <td class="same">O(H) name search + O(B) bracket match (unchanged)</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td class="same">O(H) + O(B) unchanged</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Shared utilities (DiffAssist)</td></tr>
+
+<tr>
+  <td><code>hoist_guards_to_with_bodies</code></td>
+  <td>General inline only; Modder missing</td>
+  <td class="improved">Exported from DiffAssist, imported by Modder <span class="fixed-tag">Modder fixed</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="improved">Single shared <code>KittyShared</code> library project; all tools import one binary -- no duplication possible <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td><code>build_passage_index</code></td>
+  <td>--</td>
+  <td class="improved">Exported from DiffAssist, Modder imports (General keeps inline) <span class="new-tag">new</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="improved">In <code>KittyShared.PassageIndex</code>; shared automatically across all tools at compile time <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>O(P)</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+  <td class="same">O(P) unchanged</td>
+</tr>
+<tr>
+  <td><code>escape_twine_tags</code></td>
+  <td>Inline in both editions</td>
+  <td class="improved">Also exported from DiffAssist for future Modder import <span class="new-tag">new export</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="improved">In <code>KittyShared.StringHelpers</code>; one implementation, all tools <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Edge cases audited and resolved (v0.6.0)</td></tr>
+
+<tr>
+  <td>JS/CSS/Events extractor absorbs following directives</td>
+  <td>Same bug (pre_proc terminated on 4 tokens only)</td>
+  <td class="improved">Terminates on all 30 directive tokens <span class="fixed-tag">fixed</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td>Add Function + Replace In Function ordering</td>
+  <td>--</td>
+  <td class="improved"><code>_KIND_ORDER</code> sorts <code>replace_in_func</code> after <code>add_func</code> <span class="fixed-tag">fixed</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td>Move Passage <code>&amp;quot;</code> entity references</td>
+  <td>--</td>
+  <td class="improved">Separate pattern set for entity-quoted passage body refs <span class="fixed-tag">fixed</span></td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Bug fixes and edge cases (v0.7.1)</td></tr>
+
+<tr>
+  <td><code>re.sub</code> backreference safety <span class="fixed-tag">v0.7.1</span></td>
+  <td><code>re.sub(pattern, apply_lines, ...)</code> -- mod text containing <code>\1</code> or <code>\g&lt;0&gt;</code> interpreted as backreferences</td>
+  <td class="same">Bug present</td>
+  <td class="improved"><code>re.sub(pattern, lambda _m: apply_lines, ...)</code> -- lambda prevents backreference interpretation</td>
+  <td class="same">Fixed unchanged</td>
+  <td class="improved">Not applicable; <code>Regex.Replace</code> with literal replacement string uses <code>$</code> syntax only; <code>\1</code> in mod text is never interpreted <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Delete Block early-injection <span class="fixed-tag">v0.7.1</span></td>
+  <td>Delete Block removes passage; Add Passage replacement deferred to Phase 7; Phase 4 directives cannot target replacement</td>
+  <td class="same">Bug present</td>
+  <td class="improved">Delete Block injects replacement passage from registry immediately, enabling Phase 4 directives to operate on it</td>
+  <td class="same">Fixed unchanged</td>
+  <td class="same">Fixed unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="improved">O(B) escape + inject per early-injected passage</td>
+  <td class="same">O(B) unchanged</td>
+  <td class="same">O(B) unchanged</td>
+</tr>
+<tr>
+  <td>Failed IA/IB registry sweep <span class="fixed-tag">v0.7.1</span></td>
+  <td>Insert After/Before targeting Add Passage content fails silently (passages not in HTML until Phase 7)</td>
+  <td class="same">Bug present</td>
+  <td class="improved">Failed IA/IB entries retried against <code>passage_registry</code> bodies between Phase 6 and Phase 7; matches applied directly into registry records</td>
+  <td class="same">Fixed unchanged</td>
+  <td class="same">Fixed unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="improved">O(F<sub>ia</sub> x R) where F<sub>ia</sub> = failed IA/IB count</td>
+  <td class="same">O(F<sub>ia</sub> x R) unchanged</td>
+  <td class="same">O(F<sub>ia</sub> x R) unchanged</td>
+</tr>
+<tr>
+  <td>Hook: declaration-style support <span class="fixed-tag">v0.7.1</span></td>
+  <td>Assignment style only: <code>name = function()</code></td>
+  <td class="same">Assignment style only</td>
+  <td class="improved">Assignment + declaration: <code>name = function()</code> and <code>function name()</code></td>
+  <td class="same">Fixed unchanged</td>
+  <td class="same">Fixed unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td><code>.index()</code> crash safety <span class="fixed-tag">v0.7.1</span></td>
+  <td><code>.index()</code> raises <code>ValueError</code> on missing bracket/brace in structural directives, Hook</td>
+  <td class="same">Crash present</td>
+  <td class="improved"><code>.find()</code> + explicit <code>-1</code> check with logged error and <code>continue</code></td>
+  <td class="same">Fixed unchanged</td>
+  <td class="improved">C# <code>IndexOf</code> returns -1 on miss; no exception path; guard at every call site <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+  <td class="same">--</td>
+</tr>
+<tr>
+  <td><code>_original_passage_names</code> on Delete Block <span class="fixed-tag">v0.7.1</span></td>
+  <td>Snapshot immutable -- deleted passage name stays in set, blocking Add Passage for same name</td>
+  <td class="same">Bug present</td>
+  <td class="improved"><code>.discard(name)</code> after Delete Block so replacement Add Passage is not skipped</td>
+  <td class="same">Fixed unchanged</td>
+  <td class="same">Fixed unchanged; <code>HashSet.Remove</code> <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>FailsPatchLog annotation <span class="new-tag">v0.7.1</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td class="improved">Stale "no match" entries annotated with "RESOLVED by registry IA/IB sweep" after successful retry</td>
+  <td class="same">Unchanged</td>
+  <td class="same">Unchanged</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="improved">O(L) file rewrite where L = log size</td>
+  <td class="same">O(L) unchanged</td>
+  <td class="same">O(L) unchanged</td>
+</tr>
+
+<tr class="section-header"><td colspan="11">Bug fixes and new behavior (v0.7.4)</td></tr>
+
+<tr>
+  <td>Hook conflict fix <span class="fixed-tag">v0.7.4</span></td>
+  <td>Assignment style only; second mod hook silently dropped</td>
+  <td class="same">Second mod hook silently dropped</td>
+  <td class="same">Second mod hook silently dropped</td>
+  <td class="improved">Second+ mod hooks appended into wrapper -- all hook bodies fire in load order</td>
+  <td class="same">Fixed unchanged <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">O(1) per additional hook body</td>
+  <td class="same">O(1) per additional hook body</td>
+</tr>
+<tr>
+  <td>Auto-close after browser launch <span class="new-tag">v0.7.4</span></td>
+  <td>Terminal waits for Enter input after patch</td>
+  <td class="same">Terminal waits</td>
+  <td class="same">Terminal waits</td>
+  <td class="improved">Terminal exits automatically after browser opens; no prompt</td>
+  <td class="same">Unchanged <span class="cs-tag">C#</span></td>
+  <td>--</td>
+  <td>--</td>
+  <td>--</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td>Per-injection source lookup <span class="fixed-tag">v0.7.4</span></td>
+  <td>O(M x entries_per_mod) linear scan of <code>mod_file_indexes</code></td>
+  <td class="improved">O(1) via <code>key_to_mod.get()</code></td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+<tr>
+  <td><code>successful_mods</code> lookup <span class="fixed-tag">v0.7.4</span></td>
+  <td>O(M x entries_per_mod) linear scan per successful Replace:</td>
+  <td class="improved">O(1) via <code>key_to_mod</code>, fallback to scan only if unknown</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged</td>
+  <td class="same">O(1) unchanged <span class="cs-tag">C#</span></td>
+  <td>O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+  <td class="same">O(1)</td>
+</tr>
+
+</tbody>
+</table>
+
+<div style="margin-top: 20px; padding: 12px 16px; background: var(--color-background-secondary); border-radius: var(--border-radius-lg); font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
+<strong style="color: var(--color-text-primary);">Variable key</strong><br>
+C = mod content size, D = total directive entries, D<sub>p</sub> = passage-targeting entries, D<sub>n</sub> = non-passage entries, H = HTML file size (5-22 MB), P = passage count (~5000), W = With: body size, A = accumulated content size, M = mod file count, R = registry entries, F = function body size, B = passage body size, J/S/E = JS/CSS/Events block counts, F<sub>ia</sub> = failed IA/IB entry count, L = log file size, T = unique Append To Passage / Insert After / Insert Before target count<br><br>
+<strong style="color: var(--color-text-primary);">C# column notes</strong><br>
+The v0.7.6 C# column reflects the same algorithmic complexity as v0.7.4 Python unless marked otherwise. Improvements marked <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;background:#5C2D91;color:#fff;font-weight:500;">C#</span> are constant-factor or architectural improvements from the language and runtime -- not algorithmic changes. The big-O class is the same; the real-world wall-clock time and peak RAM usage are lower.
+</div>
