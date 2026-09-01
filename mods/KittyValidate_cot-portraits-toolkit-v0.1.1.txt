@@ -1,0 +1,3 @@
+﻿=== KittyValidate 1.0.0: cot-portraits-toolkit-v0.1.1.mod ===
+Summary: 13 directives | 13 succeed (safe=2, add=1, skip=0, guarded=0) | 0 will fail | 0 ambiguous | 0 invalid | 10 unscoped
+Tier distribution: TS=1 T5=12
